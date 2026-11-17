@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fair Play – interactive dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500&family=Jost:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f7f5f0;--ink:#1d1d1d;--title:#680c38;--grid:#e6e2da;--divider:#ccc6bd;--mute:#8d8a86;--laws:#6155a6;--no:#d7df3a;--shadow:#111;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Jost',system-ui,sans-serif;width:100vw;min-height:100vh;overflow-x:hidden;display:flex;flex-direction:column;justify-content:center}
+.wrap{width:100%;max-width:1920px;margin:0 auto;padding:2.2vw 3.5vw;display:grid;grid-template-columns:1.05fr 1fr;gap:4vw;align-items:stretch}
+@media(max-width:960px){.wrap{grid-template-columns:1fr;padding:24px}}
+.col-left,.col-right{display:flex;flex-direction:column;justify-content:space-between}
+h1{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;color:var(--title);font-size:clamp(64px,7.8vw,148px);line-height:.9;margin:0 0 1.2vw;letter-spacing:-.04em}
+h2{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;color:var(--title);font-size:clamp(16px,1.25vw,24px);margin:0 0 .25vw;letter-spacing:-.02em;text-transform:uppercase}
+p{margin:0 0 .85vw;line-height:1.32;font-size:clamp(13px,.92vw,17.5px);max-width:92%}
+.pills{display:grid;grid-template-columns:repeat(6,1fr);gap:.75vw;margin:1.1vw 0 2.1vw;width:96%}
+@media(max-width:640px){.pills{grid-template-columns:repeat(3,1fr);gap:10px;width:100%}}
+.pill{border:0;border-radius:999px;padding:.58vw .3vw;color:#fff;font:500 clamp(11px,.76vw,14.5px) 'Jost',sans-serif;cursor:pointer;box-shadow:2.5px 4px 0 var(--shadow);transition:background .35s,transform .15s,box-shadow .15s;text-align:center;white-space:nowrap}
+.pill:active{transform:translate(2px,3px);box-shadow:1px 1px 0 var(--shadow)}
+.pill.off{background:#999!important}
+.indent{padding-left:2.4vw}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:'Jost',sans-serif;fill:var(--ink)}
+.line{fill:none;stroke-width:2.6;stroke-linejoin:round;transition:opacity .35s}
+.bar{transition:opacity .35s}
+.dot{transition:opacity .2s}
+.law-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:1vw}
+.legend{display:flex;gap:1.6vw;font-size:clamp(12px,.85vw,16px);align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:.45vw}
+.legend i{display:inline-block;width:.65vw;height:.65vw;min-width:9px;min-height:9px;border-radius:50%}
+.row{display:grid;grid-template-columns:1.15fr 1fr;gap:2.2vw;margin-top:2vw;align-items:start}
+@media(max-width:560px){.row{grid-template-columns:1fr}}
+.q{display:grid;grid-template-columns:repeat(3,1fr);gap:.65vw;width:100%;max-width:22vw;margin-top:.8vw}
+@media(max-width:960px){.q{max-width:340px;gap:10px}}
+.q div{aspect-ratio:1;border-radius:50%;display:grid;place-items:center;color:#f7f5f0;font:500 clamp(32px,3.4vw,64px)/1 'Bodoni Moda',Georgia,serif;letter-spacing:-.05em;transition:opacity .35s}
+</style></head><body>
+<div class="wrap">
+<section class="col-left">
+<div>
+<h1>Fair Play</h1>
+<p>The international data we gathered on women’s employment is categorized by continent to make a digestable overall view of the trends and progress recorded towards equality.</p>
+<p>Feel free to explore each continent’s ratio with a click!</p>
+<div class="pills" id="pills"></div>
+</div>
+<div>
+<div class="indent">
+<h2>Labor Force</h2>
+<p style="margin-bottom:.4vw">Ratio of female to male labor force participation rate</p>
+</div>
+<svg id="chart" viewBox="0 0 620 400"></svg>
+</div>
+</section>
+<section class="col-right">
+<div>
+<div class="indent">
+<h2>Law Status</h2>
+<div class="law-head">
+<p style="margin:0;max-width:none">Does the law ban gender discrimination in employment?</p>
+<div class="legend">
+<span><i style="background:var(--laws)"></i> Laws Exist</span>
+<span><i style="background:var(--no)"></i> No Laws</span>
+</div>
+</div>
+</div>
+<svg id="bars" viewBox="0 0 620 295"></svg>
+</div>
+<div class="row indent">
+<div><h2>Quick Look</h2><p style="max-width:none">Key numbers (%) of Labor Force participation by year</p><div class="q" id="q"></div></div>
+<div><h2>Zoomed In</h2><p style="max-width:none">Comparison between male and female labor participation rates</p><svg id="spark" viewBox="0 0 260 195"></svg></div>
+</div>
+</section></div>
+<script>
+const Y0=1990,N=36;
+const D=[
+{n:'North America',c:'#9b5fa5',l:[73,26],o:4,r:[59.7,62.1,60,59.9,62,62.2,61.7,63.6,62.6,63.5,64.1,64.7,63.7,65.9,64.9,66,66.1,67.3,67.4,70.2,70,71,71.1,72.1,71.6,71.7,70.5,70.5,72.6,73.2,74,72.9,72.3,73.3,72.5,73.1]},
+{n:'South America',c:'#d98aa9',l:[90,8],o:3.6,r:[54.9,56.2,57.1,56.2,57.9,58.7,59.4,60.5,61.1,61.5,62.4,62.7,63.5,62.7,64.4,66,65.6,66.3,66.7,67.5,66.9,68.1,68.9,68.8,68.9,69.4,70.3,71.2,71.9,72.4,70.3,71.9,72.9,73.3,73.5,73]},
+{n:'Europe',c:'#680c38',l:[100,0],o:-5,r:[68.6,70.6,71.5,71.1,71,72.3,72.2,72.8,73.4,73.7,74,74.5,75,75.6,76.2,77,77,77.2,77.4,77.9,78.3,78.7,79,78.8,79.2,79,79.6,79.6,80,80.1,80.4,80.8,81.9,82.1,82.5,83.3]},
+{n:'Africa',c:'#547f87',l:[87,10],o:2,r:[69.6,71,71.8,70.9,71.2,71,71.5,72.3,73,73.7,71.4,73.5,73.9,75.2,74.7,75,73.9,74.3,74.3,73.1,75.5,74.4,73.2,74.7,75.1,74.8,73.8,73.7,75.4,74.7,76,75,74.3,76.8,77.4,77.3]},
+{n:'Asia',c:'#d98a66',l:[77,21],o:5,r:[53.8,53,53.5,54.8,54.5,54.8,58.3,56.4,58.4,58.5,57.5,58.2,58.3,60.2,59.8,58,57.3,57.1,58.2,59.3,61.1,60.2,59.8,61.1,60.3,63.3,60.9,61.2,60.5,61.3,61,60.7,62,62.8,62.1,62.5]},
+{n:'Oceania',c:'#86b7a9',l:[58,42],o:2,r:[73,72.5,74.4,74.6,74.2,76.7,73.3,75.9,76.1,73.8,78.2,75.2,76.3,78.4,76.9,76,77.1,75.2,77.9,79.7,81,73.6,78,79.9,76.7,78.3,75,78.2,77.4,78.1,80,79,79.3,80.1,79.9,82]}];
+const QO=[5,1,4,3,0,2];
+const interp=a=>Array.from({length:N},(_,i)=>{const y=Y0+i;for(let k=0;k<a.length-1;k++){const[y1,v1]=a[k],[y2,v2]=a[k+1];if(y>=y1&&y<=y2)return v1+(v2-v1)*(y-y1)/(y2-y1)}});
+const GM=interp([[1990,74.5],[2005,72.8],[2019,69.5],[2020,68.6],[2021,69.6],[2023,70.2],[2024,70],[2025,69.9]]);
+const GF=interp([[1990,49.2],[2005,50.6],[2019,51.8],[2020,50.2],[2021,51.2],[2023,52],[2025,52]]);
+const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg';
+const mk=(p,t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+const X=y=>44+(y-Y0)*546/35,Y=v=>24+(85-v)*336/35;
+let sel=null,yr=null;
+
+// Pills
+D.forEach((d,k)=>{const b=document.createElement('button');b.className='pill';b.textContent=d.n;b.style.background=d.c;b.onclick=()=>{sel=sel===k?null:k;render()};d.b=b;$('pills').appendChild(b)});
+
+// Labor Force Chart
+const ch=$('chart');
+for(let v=50;v<=85;v+=5){
+  mk(ch,'line',{x1:36,x2:610,y1:Y(v),y2:Y(v),stroke:'var(--grid)'});
+  mk(ch,'text',{x:0,y:Y(v)+4,'font-size':11,fill:'var(--mute)'}).textContent=v+'%';
+}
+for(let y=1990;y<=2025;y+=5){
+  mk(ch,'line',{x1:X(y),x2:X(y),y1:24,y2:360,stroke:'var(--grid)'});
+  mk(ch,'text',{x:X(y),y:382,'text-anchor':'middle','font-size':11,fill:'var(--mute)'}).textContent=y;
+}
+const band=mk(ch,'rect',{y:24,height:336,width:26,fill:'#f6c75a','fill-opacity':.18,opacity:0});
+const yl=mk(ch,'text',{y:15,'text-anchor':'middle','font-size':12,'font-weight':500,opacity:0});
+D.forEach(d=>{d.p=mk(ch,'path',{class:'line',stroke:d.c,d:d.r.map((v,i)=>(i?'L':'M')+X(Y0+i).toFixed(1)+' '+Y(v).toFixed(1)).join('')})});
+D.forEach(d=>{d.dot=mk(ch,'circle',{class:'dot',r:5,fill:d.c,opacity:0})});
+const hit=mk(ch,'rect',{x:44,y:15,width:546,height:355,fill:'transparent'});
+const mv=e=>{const r=ch.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*620;yr=Math.max(Y0,Math.min(2025,Math.round(Y0+(x-44)*35/546)));render()};
+hit.onpointermove=mv;hit.onpointerdown=mv;hit.onpointerleave=()=>{yr=null;render()};
+
+// Law Status Bars
+const bs=$('bars');
+const baseLine=252,scale=2.14;
+for(let v=0;v<=100;v+=20){
+  mk(bs,'line',{x1:36,x2:614,y1:baseLine-v*scale,y2:baseLine-v*scale,stroke:'var(--grid)'});
+  mk(bs,'text',{x:0,y:baseLine+4-v*scale,'font-size':11,fill:'var(--mute)'}).textContent=v+'%';
+}
+const order=[3,4,2,0,5,1];
+const colW=95;
+order.forEach((k,i)=>{
+  const d=D[k],cx=42+i*colW,g=mk(bs,'g',{class:'bar'});d.g=g;
+  mk(bs,'line',{x1:cx,x2:cx,y1:8,y2:280,stroke:'var(--divider)','stroke-width':1});
+  mk(g,'text',{x:cx+7,y:21,'font-size':11,fill:'var(--mute)'}).textContent=d.n;
+  mk(g,'rect',{x:cx+7,y:baseLine-d.l[0]*scale,width:33,height:d.l[0]*scale,fill:'var(--laws)'});
+  mk(g,'rect',{x:cx+51,y:baseLine-d.l[1]*scale,width:33,height:Math.max(d.l[1]*scale,0),fill:'var(--no)'});
+});
+mk(bs,'line',{x1:42+6*colW,x2:42+6*colW,y1:8,y2:280,stroke:'var(--divider)','stroke-width':1});
+
+// Quick Look Circles
+QO.forEach(k=>{const e=document.createElement('div');e.style.background=D[k].c;D[k].q=e;$('q').appendChild(e)});
+
+// Zoomed In Sparklines
+const sp=$('spark');
+const gm=(arr,lo,hi,y0,h)=>arr.map((v,i)=>(i?'L':'M')+(26+i*6.3).toFixed(1)+' '+(y0+h-(v-lo)/(hi-lo)*h).toFixed(1)).join('');
+function spark(i){sp.innerHTML='';
+const d=sel==null?null:D[sel];
+const M=d?GM.map(v=>v+d.o):GM,F=d?M.map((v,j)=>v*d.r[j]/100):GF;
+[[M,'M',60,'#3a3a3a'],[F,'F',164,'#9a9a9a']].forEach(([a,l,yb,col])=>{
+const lo=Math.min(...a)-1.5,hi=Math.max(...a)+1.5,y0=yb-44,h=44;
+mk(sp,'text',{x:0,y:yb-h/2+4,'font-size':12.5,fill:'var(--mute)'}).textContent=l;
+mk(sp,'path',{d:gm(a,lo,hi,y0,h),fill:'none',stroke:col,'stroke-width':4.2,'stroke-linejoin':'round'});
+const cx=26+i*6.3,cy=y0+h-(a[i]-lo)/(hi-lo)*h;
+mk(sp,'circle',{cx,cy,r:4.2,fill:'none',stroke:'#1aa7ec','stroke-width':1.8});
+mk(sp,'text',{x:Math.min(cx,235),y:cy-11,'text-anchor':'middle','font-size':13.5}).textContent=a[i].toFixed(1)+'%'})}
+
+function render(){
+const i=(yr??2025)-Y0;
+band.setAttribute('x',X(yr??2025)-13);band.setAttribute('opacity',yr==null?0:1);
+yl.setAttribute('x',X(yr??2025));yl.setAttribute('opacity',yr==null?0:1);yl.textContent=yr??'';
+D.forEach((d,k)=>{const on=sel==null||sel===k;
+d.p.style.opacity=on?1:.16;d.b.classList.toggle('off',!on);
+d.dot.setAttribute('cx',X(yr??2025));d.dot.setAttribute('cy',Y(d.r[i]));d.dot.setAttribute('opacity',yr!=null&&on?1:0);
+d.g.style.opacity=on?1:.3;
+d.q.textContent=on?Math.round(d.r[i]):'00';d.q.style.opacity=on?1:.25});
+spark(i)}
+render();
+</script></body></html>
